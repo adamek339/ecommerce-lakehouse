@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   minio:
     image: minio/minio
@@ -13,7 +12,6 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
-
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: sqlserver_source
@@ -21,7 +19,9 @@ services:
       - "1434:1433"
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Wampir1!"
-
+      MSSQL_SA_PASSWORD: "Admin1234"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
 volumes:
   minio_data:
+  sqlserver_data:

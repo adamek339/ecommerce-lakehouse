@@ -9,7 +9,7 @@ conn = pyodbc.connect(
     "SERVER=localhost,1434;"
     "DATABASE=ecommerce;"
     "UID=sa;"
-    "PWD=Wampir1!"
+    "PWD=Admin1234"
 )
 
 cursor = conn.cursor()
