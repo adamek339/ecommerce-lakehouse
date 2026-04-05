@@ -1,4 +1,8 @@
-version: '3.8'
+# Z katalogu głównego repozytorium:
+#   docker compose --env-file .env -f docker/docker-compose.yml up -d
+# Docker podstawia zmienne ${...} z podanego pliku; sam plik compose leży w docker/,
+# więc bez --env-file .env szukałby docker/.env i hasła byłyby puste.
+
 services:
   minio:
     image: minio/minio
@@ -7,21 +11,23 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: admin123
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: sqlserver_source
     ports:
-      - "1434:1433"
+      - "${MSSQL_PORT:-1434}:1433"
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Admin1234"
+      MSSQL_SA_PASSWORD: ${MSSQL_PASSWORD}
     volumes:
       - sqlserver_data:/var/opt/mssql
+
 volumes:
   minio_data:
   sqlserver_data:

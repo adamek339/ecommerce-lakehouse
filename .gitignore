@@ -3,3 +3,6 @@ __pycache__/
 .env
 data/raw/*
 *.jar
+
+# Lokalne skróty / komendy startu kontenerów (nie commitujemy)
+/kontenery_start*
