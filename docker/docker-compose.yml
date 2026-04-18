@@ -2,6 +2,31 @@
 #   docker compose --env-file .env -f docker/docker-compose.yml up -d
 # Docker podstawia zmienne ${...} z podanego pliku; sam plik compose leży w docker/,
 # więc bez --env-file .env szukałby docker/.env i hasła byłyby puste.
+x-airflow-common: &airflow-common
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.airflow
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+    MINIO_ENDPOINT: http://minio:9000
+    MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+    MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    MSSQL_HOST: sqlserver_source
+    MSSQL_PORT: "1433"
+    MSSQL_DATABASE: ${MSSQL_DATABASE}
+    MSSQL_USER: ${MSSQL_USER}
+    MSSQL_PASSWORD: ${MSSQL_PASSWORD}
+  volumes:
+    - ../dags:/opt/airflow/dags
+    - ../spark:/opt/airflow/spark
+    - ../load_repo_env.py:/opt/airflow/load_repo_env.py
+    - airflow_logs:/opt/airflow/logs
+  depends_on:
+    postgres:
+      condition: service_healthy
 
 services:
   minio:
@@ -28,6 +53,50 @@ services:
     volumes:
       - sqlserver_data:/var/opt/mssql
 
+  postgres:
+    image: postgres:15
+    container_name: airflow_postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD}
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+    command:
+      - bash
+      - -c
+      - >-
+        airflow db migrate &&
+        airflow users create
+        --username admin
+        --password ${AIRFLOW_ADMIN_PASSWORD}
+        --firstname Admin
+        --lastname User
+        --role Admin
+        --email admin@example.com
+    restart: "no"
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow_webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    restart: always
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow_scheduler
+    command: scheduler
+    restart: always   
+
 volumes:
   minio_data:
   sqlserver_data:
+  postgres_data:
+  airflow_logs:
